@@ -1,0 +1,87 @@
+{
+  "name": "Lumina Skin Health API",
+  "version": "1.0.0",
+  "base_url": "https://your-deployment-url.com",
+  "model": {
+    "architecture": "MobileNetV2 (Fine-Tuned)",
+    "test_accuracy": 0.9915013909339905,
+    "macro_f1": 0.990162642460275,
+    "classes": [
+      "Vitiligo",
+      "acne",
+      "hyperpigmentation"
+    ],
+    "input_size": "224x224"
+  },
+  "endpoints": {
+    "GET /": {
+      "description": "API information and available endpoints",
+      "response": {
+        "name": "str",
+        "version": "str",
+        "endpoints": "dict"
+      }
+    },
+    "GET /health": {
+      "description": "Health check",
+      "response": {
+        "status": "str",
+        "model_loaded": "bool"
+      }
+    },
+    "POST /predict": {
+      "description": "Classify a skin condition from an image",
+      "content_type": "multipart/form-data",
+      "parameters": {
+        "image": "File (jpg, jpeg, png, bmp) - required",
+        "session_id": "String - optional, links diagnosis to chat"
+      },
+      "response": {
+        "success": true,
+        "diagnosis": {
+          "prediction": "acne",
+          "confidence": 95.23,
+          "all_predictions": [
+            {
+              "condition": "acne",
+              "confidence": 95.23
+            },
+            {
+              "condition": "hyperpigmentation",
+              "confidence": 3.12
+            },
+            {
+              "condition": "Vitiligo",
+              "confidence": 1.65
+            }
+          ]
+        }
+      }
+    },
+    "POST /predict/base64": {
+      "description": "Classify from base64-encoded image (for React Native)",
+      "content_type": "application/json",
+      "parameters": {
+        "image": "Base64 string - required",
+        "session_id": "String - optional"
+      }
+    },
+    "POST /chat": {
+      "description": "Chat with the AI skincare assistant",
+      "content_type": "application/json",
+      "parameters": {
+        "message": "String - required",
+        "session_id": "String - optional, uses stored diagnosis",
+        "diagnosis": "Object - optional, pass diagnosis directly",
+        "history": "Array - optional, conversation history"
+      },
+      "response": {
+        "success": true,
+        "response": {
+          "reply": "AI-generated skincare advice...",
+          "status": "success or fallback"
+        }
+      }
+    }
+  }
+}
