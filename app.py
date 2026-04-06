@@ -1,9 +1,12 @@
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from config import Config
 from model_service import SkinClassifier
 from chat_service import SkincareChatbot
-import os
 
 app = Flask(__name__)
 CORS(app)
