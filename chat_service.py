@@ -1,12 +1,10 @@
 import os
-import requests
-import json
+import google.generativeai as genai
 
 
 class SkincareChatbot:
     def __init__(self, api_key=None):
-        self.api_key = api_key or os.environ.get('OPENAI_API_KEY', '')
-        self.api_url = 'https://api.openai.com/v1/chat/completions'
+        self.api_key = api_key or os.environ.get('GOOGLE_API_KEY', '')
         self.system_prompt = """You are Lumina, a friendly and knowledgeable AI skincare assistant.
 You help users understand their skin conditions and provide practical advice.
 
@@ -19,6 +17,15 @@ Your role:
 
 You are NOT a doctor. Always include a disclaimer that your advice is general
 and not a substitute for professional medical advice."""
+
+        if self.api_key:
+            genai.configure(api_key=self.api_key)
+            self.model = genai.GenerativeModel(
+                model_name='gemini-2.0-flash',
+                system_instruction=self.system_prompt
+            )
+        else:
+            self.model = None
 
     def get_diagnosis_context(self, diagnosis):
         if not diagnosis:
@@ -35,42 +42,34 @@ Provide advice based on this analysis. If confidence is below 70%, mention that
 the result is uncertain and recommend a professional evaluation."""
 
     def chat(self, user_message, diagnosis=None, conversation_history=None):
-        if not self.api_key:
+        if not self.model:
             return self._fallback_response(user_message, diagnosis)
 
-        messages = [{'role': 'system', 'content': self.system_prompt}]
-
-        if diagnosis:
-            context = self.get_diagnosis_context(diagnosis)
-            messages.append({'role': 'system', 'content': context})
-
-        if conversation_history:
-            messages.extend(conversation_history)
-
-        messages.append({'role': 'user', 'content': user_message})
-
         try:
-            response = requests.post(
-                self.api_url,
-                headers={
-                    'Authorization': f'Bearer {self.api_key}',
-                    'Content-Type': 'application/json'
-                },
-                json={
-                    'model': 'gpt-4o-mini',
-                    'messages': messages,
-                    'max_tokens': 500,
-                    'temperature': 0.7
-                },
-                timeout=30
+            # Build conversation for Gemini
+            contents = []
+
+            if diagnosis:
+                context = self.get_diagnosis_context(diagnosis)
+                contents.append({'role': 'user', 'parts': [context]})
+                contents.append({'role': 'model', 'parts': ['I understand the diagnosis. I\'ll provide advice based on this analysis.']})
+
+            if conversation_history:
+                for msg in conversation_history:
+                    role = 'user' if msg.get('role') == 'user' else 'model'
+                    contents.append({'role': role, 'parts': [msg.get('content', '')]})
+
+            contents.append({'role': 'user', 'parts': [user_message]})
+
+            response = self.model.generate_content(
+                contents,
+                generation_config=genai.types.GenerationConfig(
+                    max_output_tokens=500,
+                    temperature=0.7
+                )
             )
 
-            if response.status_code == 200:
-                data = response.json()
-                reply = data['choices'][0]['message']['content']
-                return {'reply': reply, 'status': 'success'}
-            else:
-                return self._fallback_response(user_message, diagnosis)
+            return {'reply': response.text, 'status': 'success'}
 
         except Exception as e:
             return self._fallback_response(user_message, diagnosis)

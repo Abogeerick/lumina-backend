@@ -1,7 +1,4 @@
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
-
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from config import Config
@@ -19,7 +16,7 @@ classifier = SkinClassifier(
     class_names=Config.CLASS_NAMES
 )
 
-chatbot = SkincareChatbot(api_key=Config.OPENAI_API_KEY)
+chatbot = SkincareChatbot(api_key=Config.GOOGLE_API_KEY)
 
 # store active diagnoses per session
 session_diagnoses = {}

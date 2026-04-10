@@ -1,31 +1,33 @@
 import numpy as np
-import tensorflow as tf
-tf.config.threading.set_inter_op_parallelism_threads(1)
-tf.config.threading.set_intra_op_parallelism_threads(1)
-from tensorflow.keras.models import load_model
-from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
-from tensorflow.keras.preprocessing.image import img_to_array
 from PIL import Image
 import io
+import tflite_runtime.interpreter as tflite
 
 
 class SkinClassifier:
     def __init__(self, model_path, image_size, class_names):
-        self.model = load_model(model_path)
+        self.interpreter = tflite.Interpreter(model_path=model_path)
+        self.interpreter.allocate_tensors()
+        self.input_details = self.interpreter.get_input_details()
+        self.output_details = self.interpreter.get_output_details()
         self.image_size = image_size
         self.class_names = class_names
+        self.model = True  # flag for health check compatibility
 
     def preprocess_image(self, image_bytes):
         img = Image.open(io.BytesIO(image_bytes)).convert('RGB')
         img = img.resize((self.image_size, self.image_size))
-        img_array = img_to_array(img)
+        img_array = np.array(img, dtype=np.float32)
+        # MobileNetV2 preprocessing: scale [0, 255] to [-1, 1]
+        img_array = (img_array / 127.5) - 1.0
         img_array = np.expand_dims(img_array, axis=0)
-        img_array = preprocess_input(img_array)
         return img_array
 
     def predict(self, image_bytes):
         processed = self.preprocess_image(image_bytes)
-        predictions = self.model.predict(processed, verbose=0)[0]
+        self.interpreter.set_tensor(self.input_details[0]['index'], processed)
+        self.interpreter.invoke()
+        predictions = self.interpreter.get_tensor(self.output_details[0]['index'])[0]
 
         results = []
         for i, (cls, prob) in enumerate(zip(self.class_names, predictions)):
