@@ -1,5 +1,8 @@
 import os
+import logging
 import google.generativeai as genai
+
+logger = logging.getLogger(__name__)
 
 
 class SkincareChatbot:
@@ -19,12 +22,18 @@ You are NOT a doctor. Always include a disclaimer that your advice is general
 and not a substitute for professional medical advice."""
 
         if self.api_key:
-            genai.configure(api_key=self.api_key)
-            self.model = genai.GenerativeModel(
-                model_name='gemini-2.0-flash',
-                system_instruction=self.system_prompt
-            )
+            try:
+                genai.configure(api_key=self.api_key)
+                self.model = genai.GenerativeModel(
+                    model_name='gemini-2.0-flash',
+                    system_instruction=self.system_prompt
+                )
+                logger.info('Gemini model initialized successfully')
+            except Exception as e:
+                logger.error(f'Failed to initialize Gemini: {e}')
+                self.model = None
         else:
+            logger.warning('No GOOGLE_API_KEY found - using fallback responses')
             self.model = None
 
     def get_diagnosis_context(self, diagnosis):
@@ -43,16 +52,16 @@ the result is uncertain and recommend a professional evaluation."""
 
     def chat(self, user_message, diagnosis=None, conversation_history=None):
         if not self.model:
+            logger.warning('No Gemini model available, using fallback')
             return self._fallback_response(user_message, diagnosis)
 
         try:
-            # Build conversation for Gemini
             contents = []
 
             if diagnosis:
                 context = self.get_diagnosis_context(diagnosis)
                 contents.append({'role': 'user', 'parts': [context]})
-                contents.append({'role': 'model', 'parts': ['I understand the diagnosis. I\'ll provide advice based on this analysis.']})
+                contents.append({'role': 'model', 'parts': ['I understand the diagnosis. I will provide advice based on this analysis.']})
 
             if conversation_history:
                 for msg in conversation_history:
@@ -69,9 +78,11 @@ the result is uncertain and recommend a professional evaluation."""
                 )
             )
 
+            logger.info('Gemini response received successfully')
             return {'reply': response.text, 'status': 'success'}
 
         except Exception as e:
+            logger.error(f'Gemini API call failed: {type(e).__name__}: {e}')
             return self._fallback_response(user_message, diagnosis)
 
     def _fallback_response(self, user_message, diagnosis=None):

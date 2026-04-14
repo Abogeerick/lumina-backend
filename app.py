@@ -1,9 +1,12 @@
 import os
+import logging
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from config import Config
 from model_service import SkinClassifier
 from chat_service import SkincareChatbot
+
+logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
 CORS(app)
@@ -43,7 +46,11 @@ def index():
 
 @app.route('/health', methods=['GET'])
 def health():
-    return jsonify({'status': 'healthy', 'model_loaded': classifier.model is not None})
+    return jsonify({
+        'status': 'healthy',
+        'model_loaded': classifier.model is not None,
+        'chatbot_mode': 'gemini' if chatbot.model else 'fallback',
+    })
 
 
 @app.route('/predict', methods=['POST'])
