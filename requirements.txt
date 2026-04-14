@@ -1,6 +1,6 @@
 flask==3.0.0
 flask-cors==4.0.0
-tflite-runtime==2.14.0
+ai-edge-litert>=1.0.1
 Pillow==10.4.0
 numpy==1.26.4
 requests==2.31.0

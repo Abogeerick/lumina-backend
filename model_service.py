@@ -1,12 +1,12 @@
 import numpy as np
 from PIL import Image
 import io
-import tflite_runtime.interpreter as tflite
+from ai_edge_litert.interpreter import Interpreter
 
 
 class SkinClassifier:
     def __init__(self, model_path, image_size, class_names):
-        self.interpreter = tflite.Interpreter(model_path=model_path)
+        self.interpreter = Interpreter(model_path=model_path)
         self.interpreter.allocate_tensors()
         self.input_details = self.interpreter.get_input_details()
         self.output_details = self.interpreter.get_output_details()
