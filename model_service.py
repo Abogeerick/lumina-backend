@@ -5,6 +5,11 @@ from ai_edge_litert.interpreter import Interpreter
 
 
 class SkinClassifier:
+    # Minimum confidence to accept a prediction
+    CONFIDENCE_THRESHOLD = 65
+    # Minimum gap between top prediction and second prediction
+    MARGIN_THRESHOLD = 20
+
     def __init__(self, model_path, image_size, class_names):
         self.interpreter = Interpreter(model_path=model_path)
         self.interpreter.allocate_tensors()
@@ -38,8 +43,17 @@ class SkinClassifier:
 
         results.sort(key=lambda x: x['confidence'], reverse=True)
 
+        top_confidence = results[0]['confidence']
+        second_confidence = results[1]['confidence']
+        margin = top_confidence - second_confidence
+
+        # Reject if model isn't confident enough or predictions are too spread out
+        is_valid = (top_confidence >= self.CONFIDENCE_THRESHOLD and
+                    margin >= self.MARGIN_THRESHOLD)
+
         return {
             'prediction': results[0]['condition'],
             'confidence': results[0]['confidence'],
-            'all_predictions': results
+            'all_predictions': results,
+            'is_skin_condition': is_valid,
         }
