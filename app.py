@@ -5,6 +5,7 @@ from flask_cors import CORS
 from config import Config
 from model_service import SkinClassifier
 from chat_service import SkincareChatbot
+from skin_tone_service import analyse_skin_tone
 
 logging.basicConfig(level=logging.INFO)
 
@@ -38,6 +39,7 @@ def index():
         'accuracy': '99.15%',
         'endpoints': {
             'POST /predict': 'Upload a skin image for classification',
+            'POST /skin-tone': 'Analyse skin tone and match to foundation shades',
             'POST /chat': 'Chat with the AI skincare assistant',
             'GET /health': 'API health check'
         }
@@ -108,6 +110,30 @@ def predict_base64():
 
     except Exception as e:
         return jsonify({'error': f'Prediction failed: {str(e)}'}), 500
+
+
+@app.route('/skin-tone', methods=['POST'])
+def skin_tone():
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image provided. Send an image file with key "image".'}), 400
+
+    file = request.files['image']
+
+    if file.filename == '':
+        return jsonify({'error': 'Empty filename.'}), 400
+
+    if not allowed_file(file.filename):
+        return jsonify({'error': f'File type not allowed. Use: {Config.ALLOWED_EXTENSIONS}'}), 400
+
+    condition = request.form.get('condition') or None
+
+    try:
+        image_bytes = file.read()
+        result = analyse_skin_tone(image_bytes, condition=condition)
+        return jsonify({'success': True, **result})
+
+    except Exception as e:
+        return jsonify({'error': f'Skin tone analysis failed: {str(e)}'}), 500
 
 
 @app.route('/chat', methods=['POST'])
